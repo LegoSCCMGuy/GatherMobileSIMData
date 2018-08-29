@@ -1,0 +1,80 @@
+
+'//----------------------------------------------------------------------------
+'// SIM Information Lookup and Storage in WMI Class for SCCM
+'// Compiled By: Barry Harriman
+'// DATE: 13/08/2015
+'// Version No: 1.0
+'//----------------------------------------------------------------------------
+'// CHANGE LOG
+'// 
+'// *********************************************************
+'// 1.0 - BH - 23/08/2015 - Initial Script 
+
+on error resume next
+
+sVersionNo = "1.1"
+EnableLogging = True
+sCompanyName = "CSA"
+
+Sub DeleteAFile(filespec)
+	Dim fso
+	Set fso = CreateObject("Scripting.FileSystemObject")
+	fso.DeleteFile(filespec)
+End Sub
+
+Sub LogEntry(strLOG)
+	If EnableLogging Then
+		oLogFile.WriteLine date & " - " & time & " - " & strLOG
+	End If
+End Sub
+
+Sub ClearOldInfo(strOldFileName)
+	if fso.fileexists(strTemp & "\" & strOldFileName) then
+		LogEntry("  ** File Found: " & strTemp & "\" & strOldFileName & ". Deleting File")
+		DeleteAFile(strTemp & "\" & strOldFileName)
+	else
+		LogEntry("  " & strOldFileName & " not found.")
+	end if
+end sub
+
+'//----------------------------------------------------------------------------
+'// Set Logging Information
+'//----------------------------------------------------------------------------
+
+Set sho = CreateObject("WScript.Shell")
+Set FSO = CreateObject("Scripting.FileSystemObject")  
+
+Set oShell = CreateObject("wscript.Shell")
+Set fso = CreateObject("scripting.filesystemobject")
+strTemp = sho.ExpandEnvironmentStrings("%temp%")
+
+If EnableLogging Then
+    Set oLogFile = fso.OpenTextFile(strTemp & "\SIMInfoCheck.log", 8, True)
+    LogEntry("*********************************************************")
+    LogEntry("***********  SIM LOOKUP Check Version : " & sVersionNo )
+    LogEntry("*********************************************************")
+End If
+const HKLM = &H80000002
+
+    
+sKeyPath = "SOFTWARE\" & sCompanyName & "\MobileBroadband"
+   LogEntry(" Running Checks.")  
+    LogEntry("Registry key path is HKLM\" & sKeyPath)
+    Set oReg=GetObject("winmgmts:{impersonationLevel=impersonate}!\\.\root\default:StdRegProv")
+
+    nowDate = Now
+
+    oReg.GetStringValue HKLM, sKeyPath, "ScriptExecuted", szValue
+    LogEntry( "Last Executed is " & szValue  )
+	DaysDiff = DateDiff("d", szvalue, nowDate)
+    LogEntry( "Days Different is " & DaysDiff )
+if DaysDiff < 2  then
+	LogEntry("ReturningResult: Success")
+	wscript.echo "Success " & DaysDiff
+else
+	LogEntry("No Result Returned to SCCM")
+ClearOldInfo("SIMInfo.log")
+end if
+LogEntry("Ending Script")
+
+wscript.quit
